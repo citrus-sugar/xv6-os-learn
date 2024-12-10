@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -94,4 +95,41 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64
+sys_trace(void)
+{
+    int mask;
+    struct proc *p = myproc();
+
+    if (argint(0, &mask) < 0)
+        return -1;
+    // printf("sys_trace: %d\n", mask);
+    // 添加标志，然后让该进程每次系统调用的时候打印
+    // 创建、复制父进程、结束
+    p->trace_mask |= mask;
+
+    return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+    struct proc *p = myproc();
+    struct sysinfo info;
+    uint64 addr;
+
+    if (argaddr(0, &addr) < 0)
+        return -1;
+
+    info.freemem = get_freemem();
+    info.nproc = get_nproc();
+
+    // printf("sys_info: %d %d\n", info.freemem, info.nproc);
+
+    if (copyout(p->pagetable, addr, (char *)&info, sizeof(info)) < 0)
+        return -1;
+    
+    return 0;
 }
